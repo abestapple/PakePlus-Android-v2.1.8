@@ -24,6 +24,12 @@
       background-color: #4a7c33;
       color: #f8fafc;
       overscroll-behavior: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    #root {
+      min-height: 100vh;
     }
 
     .bg-pastoral {
@@ -68,6 +74,43 @@
       50% { opacity: 0.25; }
     }
 
+    /* zzz */
+    @keyframes inner-fade {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .animate-inner-fade {
+      animation: inner-fade 0.5s ease-out forwards;
+    }
+
+    @keyframes crop-grow-up {
+      0% { 
+        opacity: 0; 
+        /* 从垂直方向压缩（高度为0），同时保持水平比例 */
+        transform: scaleY(0.5) scaleX(0.8); 
+      }
+      100% { 
+        opacity: 1; 
+        transform: scaleY(1) scaleX(1); 
+      }
+    }
+
+    .animate-grow-bottom {
+      /* 核心：设置变换原点为底部中心 */
+      transform-origin: bottom center;
+      /* 使用自定义的向上生长动画 */
+      animation: crop-grow-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+
+
+    /* 添加背景色过渡效果 */
+    .soil-transition {
+      transition: background-color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* zzz */
+
     .animate-float-up {
       animation: float-up 0.9s ease-out forwards;
     }
@@ -83,29 +126,82 @@
     .pb-safe {
       padding-bottom: env(safe-area-inset-bottom, 0);
     }
+
+    @keyframes pf-load-fill {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+
+    .pf-load-track {
+      width: min(360px, calc(100vw - 48px));
+      height: 14px;
+      border-radius: 9999px;
+      background: rgba(15, 23, 42, 0.35);
+      border: 2px solid rgba(15, 23, 42, 0.45);
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.35);
+    }
+
+    .pf-load-bar {
+      height: 100%;
+      transform-origin: left center;
+      transform: scaleX(0);
+      animation: pf-load-fill 600ms linear forwards;
+      background: linear-gradient(90deg, #facc15 0%, #fde047 45%, #f59e0b 100%);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.12), inset 0 0 0 1px rgba(255,255,255,0.35);
+    }
+
+    .pf-wood-btn {
+      width: min(320px, calc(100vw - 64px));
+      height: 56px;
+      border-radius: 16px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #4b2e14;
+      background: linear-gradient(180deg, #f0c8a0 0%, #d4a373 55%, #b07d4b 100%);
+      border: 2px solid #5c3a18;
+      box-shadow: 0 10px 0 #5c3a18, 0 18px 25px rgba(0,0,0,0.35);
+      transform: translateY(0);
+      transition: transform 80ms ease-out, box-shadow 80ms ease-out;
+      user-select: none;
+    }
+
+    .pf-wood-btn:active {
+      transform: translateY(6px);
+      box-shadow: 0 4px 0 #5c3a18, 0 10px 16px rgba(0,0,0,0.35);
+    }
+
+    .pf-load-screen {
+      background-image: url('jiazai_bg.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .pt-safe {
+      padding-top: env(safe-area-inset-top, 0);
+    }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
-
+  <script>
     // ==================== Constants ====================
     const PlantDB = {
-      daisy: { id: 'daisy', name: '小雏菊', category: 'flower', cost: 10, sellPrice: 30, growthDays: 3, optTempMin: 15, optTempMax: 25, unlockPrice: 0, icon: '🌼', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🌼', dead: '🥀' } },
-      tulip: { id: 'tulip', name: '郁金香', category: 'flower', cost: 18, sellPrice: 55, growthDays: 4, optTempMin: 12, optTempMax: 24, unlockPrice: 0, icon: '🌷', stageIcons: { seed: '🧅', sprout: '🌱', growing: '🌿', mature: '🌷', dead: '🥀' } },
-      rose: { id: 'rose', name: '玫瑰', category: 'flower', cost: 25, sellPrice: 80, growthDays: 5, optTempMin: 18, optTempMax: 28, unlockPrice: 120, icon: '🌹', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🌹', dead: '🥀' } },
-      lily: { id: 'lily', name: '百合', category: 'flower', cost: 22, sellPrice: 70, growthDays: 4, optTempMin: 14, optTempMax: 26, unlockPrice: 120, icon: '🪷', stageIcons: { seed: '🧅', sprout: '🌱', growing: '🌿', mature: '🪷', dead: '🥀' } },
-      sunflower: { id: 'sunflower', name: '向日葵', category: 'flower', cost: 30, sellPrice: 95, growthDays: 5, optTempMin: 16, optTempMax: 30, unlockPrice: 150, icon: '🌻', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🍀', mature: '🌻', dead: '🥀' } },
-      carrot: { id: 'carrot', name: '胡萝卜', category: 'veg', cost: 12, sellPrice: 35, growthDays: 3, optTempMin: 10, optTempMax: 24, unlockPrice: 0, icon: '🥕', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🥕', dead: '🍂' } },
-      tomato: { id: 'tomato', name: '番茄', category: 'veg', cost: 16, sellPrice: 48, growthDays: 4, optTempMin: 14, optTempMax: 28, unlockPrice: 0, icon: '🍅', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🍅', dead: '🍂' } },
-      lettuce: { id: 'lettuce', name: '生菜', category: 'veg', cost: 14, sellPrice: 42, growthDays: 3, optTempMin: 8, optTempMax: 22, unlockPrice: 140, icon: '🥬', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🥬', dead: '🍂' } },
-      pumpkin: { id: 'pumpkin', name: '南瓜', category: 'veg', cost: 28, sellPrice: 90, growthDays: 6, optTempMin: 16, optTempMax: 30, unlockPrice: 170, icon: '🎃', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🎃', dead: '🍂' } },
-      broccoli: { id: 'broccoli', name: '西兰花', category: 'veg', cost: 18, sellPrice: 55, growthDays: 4, optTempMin: 10, optTempMax: 22, unlockPrice: 160, icon: '🥦', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🥦', dead: '🍂' } },
-      strawberry: { id: 'strawberry', name: '草莓', category: 'veg', cost: 20, sellPrice: 65, growthDays: 4, optTempMin: 15, optTempMax: 26, unlockPrice: 180, icon: '🍓', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🍓', dead: '🍂' } },
-      corn: { id: 'corn', name: '玉米', category: 'veg', cost: 24, sellPrice: 75, growthDays: 5, optTempMin: 18, optTempMax: 32, unlockPrice: 200, icon: '🌽', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🌽', dead: '🍂' } },
-      blueberry: { id: 'blueberry', name: '蓝莓', category: 'veg', cost: 35, sellPrice: 110, growthDays: 6, optTempMin: 12, optTempMax: 24, unlockPrice: 250, icon: '🫐', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🫐', dead: '🍂' } },
+      daisy: { id: 'daisy', name: '小雏菊', category: 'flower', cost: 10, sellPrice: 30, growthDays: 3, optTempMin: 15, optTempMax: 25, unlockPrice: 0, icon: '🌼', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🌼', dead: '🥀' }, imageUrl: 'daisy_mature.png', stageImages: { seed: 'daisy_seed.png', sprout: 'daisy_sprout.png', growing: 'daisy_growing.png', mature: 'daisy_mature.png', dead: 'daisy_dead.png' } },
+      tulip: { id: 'tulip', name: '郁金香', category: 'flower', cost: 18, sellPrice: 55, growthDays: 4, optTempMin: 12, optTempMax: 24, unlockPrice: 0, icon: '🌷', stageIcons: { seed: '🧅', sprout: '🌱', growing: '🌿', mature: '🌷', dead: '🥀' }, imageUrl: 'tulip_mature.png', stageImages: { seed: 'tulip_seed.png', sprout: 'tulip_sprout.png', growing: 'tulip_growing.png', mature: 'tulip_mature.png', dead: 'tulip_dead.png' } },
+      rose: { id: 'rose', name: '玫瑰', category: 'flower', cost: 25, sellPrice: 80, growthDays: 5, optTempMin: 18, optTempMax: 28, unlockPrice: 120, icon: '🌹', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🌹', dead: '🥀' }, imageUrl: 'rose_mature.png', stageImages: { seed: 'rose_seed.png', sprout: 'rose_sprout.png', growing: 'rose_growing.png', mature: 'rose_mature.png', dead: 'rose_dead.png' }  },
+      lily: { id: 'lily', name: '百合', category: 'flower', cost: 22, sellPrice: 70, growthDays: 4, optTempMin: 14, optTempMax: 26, unlockPrice: 120, icon: '🪷', stageIcons: { seed: '🧅', sprout: '🌱', growing: '🌿', mature: '🪷', dead: '🥀' }, imageUrl: 'lily_mature.png', stageImages: { seed: 'lily_seed.png', sprout: 'lily_sprout.png', growing: 'lily_growing.png', mature: 'lily_mature.png', dead: 'lily_dead.png' }  },
+      sunflower: { id: 'sunflower', name: '向日葵', category: 'flower', cost: 30, sellPrice: 95, growthDays: 5, optTempMin: 16, optTempMax: 30, unlockPrice: 150, icon: '🌻', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🍀', mature: '🌻', dead: '🥀' }, imageUrl: 'sunflower_mature.png', stageImages: { seed: 'sunflower_seed.png', sprout: 'sunflower_sprout.png', growing: 'sunflower_growing.png', mature: 'sunflower_mature.png', dead: 'sunflower_dead.png' } },
+      carrot: { id: 'carrot', name: '胡萝卜', category: 'veg', cost: 12, sellPrice: 35, growthDays: 3, optTempMin: 10, optTempMax: 24, unlockPrice: 0, icon: '🥕', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🥕', dead: '🍂' }, imageUrl: 'carrot_mature.png', stageImages: { seed: 'carrot_seed.png', sprout: 'carrot_sprout.png', growing: 'carrot_growing.png', mature: 'carrot_mature.png', dead: 'carrot_dead.png' } },
+      tomato: { id: 'tomato', name: '番茄', category: 'veg', cost: 16, sellPrice: 48, growthDays: 4, optTempMin: 14, optTempMax: 28, unlockPrice: 0, icon: '🍅', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🍅', dead: '🍂' }, imageUrl: 'tomato_mature.png', stageImages: { seed: 'tomato_seed.png', sprout: 'tomato_sprout.png', growing: 'tomato_growing.png', mature: 'tomato_mature.png', dead: 'tomato_dead.png' }  },
+      lettuce: { id: 'lettuce', name: '生菜', category: 'veg', cost: 14, sellPrice: 42, growthDays: 3, optTempMin: 8, optTempMax: 22, unlockPrice: 140, icon: '🥬', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🥬', dead: '🍂' }, imageUrl: 'lettuce_mature.png', stageImages: { seed: 'lettuce_seed.png', sprout: 'lettuce_sprout.png', growing: 'lettuce_growing.png', mature: 'lettuce_mature.png', dead: 'lettuce_dead.png' }   },
+      pumpkin: { id: 'pumpkin', name: '南瓜', category: 'veg', cost: 28, sellPrice: 90, growthDays: 6, optTempMin: 16, optTempMax: 30, unlockPrice: 170, icon: '🎃', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🎃', dead: '🍂' }, imageUrl: 'pumpkin_mature.png', stageImages: { seed: 'pumpkin_seed.png', sprout: 'pumpkin_sprout.png', growing: 'pumpkin_growing.png', mature: 'pumpkin_mature.png', dead: 'pumpkin_dead.png' }  },
+      broccoli: { id: 'broccoli', name: '西兰花', category: 'veg', cost: 18, sellPrice: 55, growthDays: 4, optTempMin: 10, optTempMax: 22, unlockPrice: 160, icon: '🥦', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🥦', dead: '🍂' }, imageUrl: 'broccoli_mature.png', stageImages: { seed: 'broccoli_seed.png', sprout: 'broccoli_sprout.png', growing: 'broccoli_growing.png', mature: 'broccoli_mature.png', dead: 'broccoli_dead.png' }  },
+      strawberry: { id: 'strawberry', name: '草莓', category: 'veg', cost: 20, sellPrice: 65, growthDays: 4, optTempMin: 15, optTempMax: 26, unlockPrice: 180, icon: '🍓', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🍓', dead: '🍂' }, imageUrl: 'strawberry_mature.png', stageImages: { seed: 'strawberry_seed.png', sprout: 'strawberry_sprout.png', growing: 'strawberry_growing.png', mature: 'strawberry_mature.png', dead: 'strawberry_dead.png' }   },
+      corn: { id: 'corn', name: '玉米', category: 'veg', cost: 24, sellPrice: 75, growthDays: 5, optTempMin: 18, optTempMax: 32, unlockPrice: 200, icon: '🌽', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🌽', dead: '🍂' }, imageUrl: 'corn_mature.png', stageImages: { seed: 'corn_seed.png', sprout: 'corn_sprout.png', growing: 'corn_growing.png', mature: 'corn_mature.png', dead: 'corn_dead.png' }    },
+      blueberry: { id: 'blueberry', name: '蓝莓', category: 'veg', cost: 35, sellPrice: 110, growthDays: 6, optTempMin: 12, optTempMax: 24, unlockPrice: 250, icon: '🫐', stageIcons: { seed: '🫘', sprout: '🌱', growing: '🌿', mature: '🫐', dead: '🍂' }, imageUrl: 'blueberry_mature.png', stageImages: { seed: 'blueberry_seed.png', sprout: 'blueberry_sprout.png', growing: 'blueberry_growing.png', mature: 'blueberry_mature.png', dead: 'blueberry_dead.png' }    },
     };
 
     const WeatherDB = {
@@ -125,27 +221,37 @@
     // ==================== Audio Manager ====================
     class AudioManager {
       constructor() {
-        this.bgm = new Audio('https://upload.wikimedia.org/wikipedia/commons/4/4b/Eric_Skiff_-_Resistor_Anthems_-_01_A_Night_Of_Dizzy_Spells.ogg');
-        this.bgm.loop = true;
-        this.bgm.preload = 'auto';
-        
-        this.rain = new Audio('https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg');
-        this.rain.loop = true;
-        
-        this.wind = new Audio('https://actions.google.com/sounds/v1/weather/howling_wind.ogg');
-        this.wind.loop = true;
+        this.bgm = this.createAudio('/assets/audio/bgm.ogg', 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Eric_Skiff_-_Resistor_Anthems_-_01_A_Night_Of_Dizzy_Spells.ogg', true);
+        this.rain = this.createAudio('rain_heavy_loud.ogg', 'https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg', true);
+        this.wind = this.createAudio('desert_howling_wind.ogg', 'https://actions.google.com/sounds/v1/weather/howling_wind.ogg', true);
 
-        this.sfxPlant = new Audio('https://actions.google.com/sounds/v1/foley/footstep_in_mud.ogg');
-        this.sfxHarvest = new Audio('https://actions.google.com/sounds/v1/foley/pulling_weeds.ogg');
-        this.sfxWater = new Audio('https://actions.google.com/sounds/v1/water/water_splash.ogg');
-        this.sfxTool = new Audio('https://actions.google.com/sounds/v1/tools/ratchet_wrench.ogg');
-        this.sfxMoney = new Audio('https://actions.google.com/sounds/v1/foley/coins_dropping.ogg');
-        this.sfxError = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        this.sfxPlant = this.createAudio('/assets/audio/plant.ogg', 'https://actions.google.com/sounds/v1/foley/footstep_in_mud.ogg');
+        this.sfxHarvest = this.createAudio('sfxHarvest.wav', 'https://actions.google.com/sounds/v1/foley/pulling_weeds.ogg');
+        this.sfxWater = this.createAudio('sfxWater.wav', 'https://actions.google.com/sounds/v1/water/water_splash.ogg');
+        this.sfxTool = this.createAudio('/assets/audio/tool.ogg', 'https://actions.google.com/sounds/v1/tools/ratchet_wrench.ogg');
+        this.sfxMoney = this.createAudio('sfxMoney.wav', 'https://actions.google.com/sounds/v1/foley/coins_dropping.ogg');
+        this.sfxError = this.createAudio('error.ogg', 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
 
         this.isMuted = false;
         this.volume = 0.5;
         this.initialized = false;
         this.updateVolumes();
+      }
+
+      createAudio(localPath, remoteUrl, loop = false) {
+        const audio = new Audio(localPath);
+        audio.loop = loop;
+        audio.preload = 'auto';
+        
+        audio.addEventListener('error', () => {
+          if (audio.src.includes(localPath)) {
+            console.log(`Local audio not found: ${localPath}, falling back to remote.`);
+            audio.src = remoteUrl;
+            audio.load();
+          }
+        }, { once: true });
+        
+        return audio;
       }
 
       init() {
@@ -157,7 +263,7 @@
       updateVolumes() {
         const v = this.isMuted ? 0 : this.volume;
         this.bgm.volume = v * 0.3;
-        this.rain.volume = v * 0.5;
+        this.rain.volume = v * 0.8;
         this.wind.volume = v * 0.5;
         this.sfxPlant.volume = v * 0.7;
         this.sfxHarvest.volume = v * 0.7;
@@ -210,6 +316,9 @@
     const weatherKeys = Object.keys(WeatherDB);
     const plantIds = Object.keys(PlantDB);
 
+    const SAVE_KEY = 'pixel-farm.progress.v1';
+    const AUTO_SAVE_MS = 30 * 1000;
+
     const createTile = (id, isUnlocked) => ({
       id,
       isUnlocked,
@@ -231,55 +340,64 @@
       currentCropCategory: null,
     });
 
+    const buildInitialState = () => ({
+      money: 500,
+      currentDay: 1,
+      currentWeather: 'Sunny',
+      currentTemp: 22,
+      dailyEarned: 0,
+      market: {},
+      warehouseLots: [],
+      warehouseCapacity: 50,
+      warehouseLevel: 0,
+      unlockedPlants: { daisy: true, tulip: true, carrot: true, tomato: true },
+      codex: {},
+      goldenCanUnlocked: false,
+      nextDayAt: Date.now() + DAY_DURATION_MS,
+      nextDayEnv: null,
+      forecastWeatherId: null,
+      inventory: [
+        { itemId: 'daisy', count: 5 },
+        { itemId: 'tulip', count: 2 },
+        { itemId: 'carrot', count: 5 },
+        { itemId: 'tomato', count: 2 },
+        { itemId: 'fertilizer', count: 2 },
+        { itemId: 'pesticide', count: 0 },
+        { itemId: 'ripener', count: 0 },
+        { itemId: 'antifreeze', count: 0 },
+      ],
+      farmGrid: Array.from({ length: GRID_SIZE * GRID_SIZE * PAGES }, (_, i) => {
+        const page = Math.floor(i / (GRID_SIZE * GRID_SIZE));
+        const idxInPage = i % (GRID_SIZE * GRID_SIZE);
+        const row = Math.floor(idxInPage / GRID_SIZE);
+        const col = idxInPage % GRID_SIZE;
+        return createTile(`tile_${page}_${row}_${col}`, page === 0 && row < 2 && col < 2);
+      }),
+    });
+
+    const buildInitialUI = () => ({
+      modal: null,
+      picker: null,
+      selected: { kind: 'tool', id: 'water' },
+      oneKeyEnabled: false,
+      toast: null,
+      floatingTexts: [],
+      audioMuted: false,
+    });
+
     class GameStore {
       constructor() {
-        this.state = {
-          money: 10000,
-          currentDay: 1,
-          currentWeather: 'Sunny',
-          currentTemp: 22,
-          dailyEarned: 0,
-          market: {},
-          warehouseLots: [],
-          warehouseCapacity: 50,
-          warehouseLevel: 0,
-          unlockedPlants: { daisy: true, tulip: true, carrot: true, tomato: true },
-          codex: {},
-          goldenCanUnlocked: false,
-          nextDayAt: Date.now() + DAY_DURATION_MS,
-          nextDayEnv: null,
-          forecastWeatherId: null,
-          inventory: [
-            { itemId: 'daisy', count: 5 },
-            { itemId: 'tulip', count: 2 },
-            { itemId: 'carrot', count: 5 },
-            { itemId: 'tomato', count: 2 },
-            { itemId: 'fertilizer', count: 2 },
-            { itemId: 'pesticide', count: 0 },
-            { itemId: 'ripener', count: 0 },
-            { itemId: 'antifreeze', count: 0 },
-          ],
-          farmGrid: Array.from({ length: GRID_SIZE * GRID_SIZE * PAGES }, (_, i) => {
-            const page = Math.floor(i / (GRID_SIZE * GRID_SIZE));
-            const idxInPage = i % (GRID_SIZE * GRID_SIZE);
-            const row = Math.floor(idxInPage / GRID_SIZE);
-            const col = idxInPage % GRID_SIZE;
-            return createTile(`tile_${page}_${row}_${col}`, page === 0 && row < 2 && col < 2);
-          }),
-        };
-
-        this.UI = {
-          modal: null,
-          picker: null,
-          selected: { kind: 'tool', id: 'water' },
-          oneKeyEnabled: false,
-          toast: null,
-          floatingTexts: [],
-          audioMuted: false,
-        };
-
+        this.state = buildInitialState();
+        this.UI = buildInitialUI();
         this.listeners = [];
-        this.boot();
+        const loaded = this.loadProgress();
+        if (!loaded) {
+          this.boot();
+        } else {
+          if (!this.state.market || !Object.keys(this.state.market).length) this.rollMarket();
+          if (!this.state.nextDayEnv) this.planTomorrow();
+        }
+        this.startAutoSave();
       }
 
       subscribe(listener) {
@@ -291,6 +409,119 @@
 
       notify() {
         this.listeners.forEach(l => l());
+      }
+
+      startAutoSave() {
+        if (this._autoSaveTimer) window.clearInterval(this._autoSaveTimer);
+        this._autoSaveTimer = window.setInterval(() => this.saveProgress(), AUTO_SAVE_MS);
+        window.addEventListener('beforeunload', this._onBeforeUnload ?? (this._onBeforeUnload = () => this.saveProgress()));
+      }
+
+      syncAudioMuted(isMuted) {
+        this.UI.audioMuted = !!isMuted;
+        audioManager.isMuted = this.UI.audioMuted;
+        audioManager.updateVolumes();
+      }
+
+      saveProgress() {
+        try {
+          const remainingMs = clamp(this.state.nextDayAt - Date.now(), 0, DAY_DURATION_MS);
+          const payload = {
+            v: 1,
+            savedAt: Date.now(),
+            remainingMs,
+            state: {
+              money: this.state.money,
+              currentDay: this.state.currentDay,
+              currentWeather: this.state.currentWeather,
+              currentTemp: this.state.currentTemp,
+              dailyEarned: this.state.dailyEarned,
+              market: this.state.market,
+              warehouseLots: this.state.warehouseLots,
+              warehouseCapacity: this.state.warehouseCapacity,
+              warehouseLevel: this.state.warehouseLevel,
+              unlockedPlants: this.state.unlockedPlants,
+              codex: this.state.codex,
+              goldenCanUnlocked: this.state.goldenCanUnlocked,
+              nextDayEnv: this.state.nextDayEnv,
+              forecastWeatherId: this.state.forecastWeatherId,
+              inventory: this.state.inventory,
+              farmGrid: this.state.farmGrid,
+            },
+            ui: {
+              selected: this.UI.selected,
+              oneKeyEnabled: this.UI.oneKeyEnabled,
+              audioMuted: this.UI.audioMuted,
+            },
+          };
+          localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+        } catch (_) {}
+      }
+
+      loadProgress() {
+        try {
+          const raw = localStorage.getItem(SAVE_KEY);
+          if (!raw) return false;
+          const payload = JSON.parse(raw);
+          if (!payload || payload.v !== 1) return false;
+
+          const baseState = buildInitialState();
+          const baseUI = buildInitialUI();
+          const savedState = payload.state && typeof payload.state === 'object' ? payload.state : null;
+          const savedUI = payload.ui && typeof payload.ui === 'object' ? payload.ui : null;
+
+          if (savedState) {
+            this.state = { ...baseState, ...savedState };
+
+            if (Array.isArray(savedState.farmGrid) && savedState.farmGrid.length === baseState.farmGrid.length) {
+              this.state.farmGrid = baseState.farmGrid.map((baseTile, i) => {
+                const t = savedState.farmGrid[i];
+                return { ...baseTile, ...(t && typeof t === 'object' ? t : {}) };
+              });
+            } else {
+              this.state.farmGrid = baseState.farmGrid;
+            }
+
+            if (Array.isArray(savedState.inventory)) {
+              this.state.inventory = savedState.inventory
+                .filter((x) => x && typeof x === 'object')
+                .map((x) => ({ itemId: x.itemId, count: x.count }));
+            } else {
+              this.state.inventory = baseState.inventory;
+            }
+          } else {
+            this.state = baseState;
+          }
+
+          const remainingMs = typeof payload.remainingMs === 'number' ? payload.remainingMs : DAY_DURATION_MS;
+          this.state.nextDayAt = Date.now() + clamp(remainingMs, 0, DAY_DURATION_MS);
+
+          if (savedUI) {
+            this.UI = { ...baseUI, ...savedUI, modal: null, picker: null, toast: null, floatingTexts: [] };
+          } else {
+            this.UI = baseUI;
+          }
+
+          this.syncAudioMuted(this.UI.audioMuted);
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      clearProgress() {
+        try {
+          localStorage.removeItem(SAVE_KEY);
+        } catch (_) {}
+      }
+
+      resetGame() {
+        const keepMuted = !!this.UI.audioMuted;
+        this.state = buildInitialState();
+        this.UI = buildInitialUI();
+        this.syncAudioMuted(keepMuted);
+        this.boot();
+        this.notify();
       }
 
       boot() {
@@ -559,7 +790,7 @@
           }
         }
 
-        if (Math.random() < 0.1) {
+        if (Math.random() < 0.05) {
           const candidates = this.state.farmGrid.filter((t) => t.isUnlocked && t.plantId && this.getPlantStage(t) !== 'dead');
           if (candidates.length) {
             const maxHit = Math.min(3, Math.max(1, Math.ceil(candidates.length * 0.25)));
@@ -999,17 +1230,48 @@
 
     const store = new GameStore();
 
+    // ==================== Export for React Components ====================
+    window.GameStore = {
+      store,
+      PlantDB,
+      WeatherDB,
+      GRID_SIZE,
+      PAGES,
+      audioManager,
+      DAY_DURATION_MS
+    };
+  </script>
+
+  <script type="text/babel">
     // ==================== React Components ====================
+    const { useState, useEffect, useRef } = React;
+
     function useStore() {
       const [, setTick] = useState(0);
       useEffect(() => {
-        return store.subscribe(() => setTick(t => t + 1));
+        return window.GameStore.store.subscribe(() => setTick(t => t + 1));
       }, []);
-      return store;
+      return window.GameStore.store;
     }
 
     const CropIcon = ({ plant, stage }) => {
+      const [imgError, setImgError] = useState(false);
       const emoji = stage ? plant.stageIcons[stage] : '🌱';
+      const imageUrl = stage ? plant.stageImages?.[stage] : plant.imageUrl;
+      console.log(imageUrl)
+      if (imageUrl && !imgError) {
+        return (
+          <img 
+            key={imageUrl}  //20260302 zzz
+            src={imageUrl} 
+            alt={plant.name} 
+            className="w-8 h-8 md:w-12 md:h-12 object-contain animate-grow-bottom"
+            onError={() => setImgError(true)}
+            referrerPolicy="no-referrer"
+          />
+        );
+      }
+
       return <div className="text-2xl md:text-4xl mb-1">{emoji}</div>;
     };
 
@@ -1105,7 +1367,7 @@
 
       return (
         <div 
-          className={`relative w-full aspect-square rounded-xl ${tile.isUnlocked ? '' : 'border-2 border-slate-700'} ${bgColor} flex items-center justify-center cursor-pointer overflow-hidden transition-transform active:scale-95`}
+          className={`relative w-full aspect-square rounded-xl ${tile.isUnlocked ? '' : 'border-2 border-slate-700'} ${bgColor} soil-transition flex items-center justify-center cursor-pointer overflow-hidden transition-transform active:scale-95`}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
@@ -1115,7 +1377,7 @@
         >
           {tile.isUnlocked && (
             <div className="absolute inset-0 pointer-events-none z-10">
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#8b5a2b] border-b border-[#5c3a18]" />
+              <div className="absolute top-0 left-0 right-0 h-1 bg-[#8b5a2b] border-b border-[#5c3a18]" />
               <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#8b5a2b] border-t border-[#5c3a18]" />
               <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-[#8b5a2b] border-r border-[#5c3a18]" />
               <div className="absolute top-0 bottom-0 right-0 w-1.5 bg-[#8b5a2b] border-l border-[#5c3a18]" />
@@ -1165,7 +1427,9 @@
               <h2 className="text-lg font-bold">
                 {modal.type === 'shop' ? '商店' : 
                  modal.type === 'settlement' ? '每日结算' : 
-                 modal.type === 'marketWarehouse' ? '市场/仓库' : '田块信息'}
+                 modal.type === 'marketWarehouse' ? '市场/仓库' :
+                 modal.type === 'settings' ? '设置' :
+                 modal.type === 'confirmReset' ? '提示' : '田块信息'}
               </h2>
               <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
             </div>
@@ -1174,6 +1438,8 @@
               {modal.type === 'marketWarehouse' && <MarketWarehouseContent game={game} />}
               {modal.type === 'settlement' && <SettlementContent game={game} />}
               {modal.type === 'tileInfo' && <TileInfoContent game={game} />}
+              {modal.type === 'settings' && <SettingsContent game={game} />}
+              {modal.type === 'confirmReset' && <ConfirmResetContent game={game} />}
             </div>
             {modal.type === 'shop' && (
               <div className="p-4 border-t border-slate-200 bg-slate-50 font-bold text-slate-800">
@@ -1185,9 +1451,91 @@
       );
     }
 
+    function ToggleSwitch({ on, onToggle }) {
+      return (
+        <button
+          onClick={onToggle}
+          className={`w-14 h-8 rounded-full p-1 transition-colors active:scale-95 ${on ? 'bg-green-500' : 'bg-slate-300'}`}
+        >
+          <div
+            className={`w-6 h-6 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-0'}`}
+          />
+        </button>
+      );
+    }
+
+    function SettingsContent({ game }) {
+      const { UI, state } = game;
+      const soundOn = !UI.audioMuted;
+
+      return (
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between bg-slate-50 rounded-xl p-3 border border-slate-200">
+            <div className="flex flex-col">
+              <div className="font-bold">声音</div>
+              <div className="text-xs text-slate-500">{soundOn ? '开启' : '关闭'}</div>
+            </div>
+            <ToggleSwitch
+              on={soundOn}
+              onToggle={() => {
+                const nextMuted = !UI.audioMuted;
+                game.syncAudioMuted(nextMuted);
+                window.GameStore.audioManager.updateWeather(state.currentWeather);
+                game.saveProgress();
+                game.notify();
+              }}
+            />
+          </div>
+
+          <button
+            className="w-full py-3 bg-red-600 text-white rounded-xl font-bold active:scale-95"
+            onClick={() => {
+              UI.modal = { type: 'confirmReset', data: { returnTo: 'settings' } };
+              game.notify();
+            }}
+          >
+            删除当前游戏进度
+          </button>
+        </div>
+      );
+    }
+
+    function ConfirmResetContent({ game }) {
+      const { UI } = game;
+      const returnTo = UI.modal?.data?.returnTo;
+
+      return (
+        <div className="flex flex-col gap-4 py-3">
+          <div className="text-center text-3xl">🗑️</div>
+          <div className="text-center font-bold text-lg">注销当前游戏进度？</div>
+          <div className="text-center text-sm text-slate-600">将清除本地存档并初始化游戏。</div>
+          <div className="flex gap-3">
+            <button
+              className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold active:scale-95"
+              onClick={() => {
+                UI.modal = returnTo ? { type: returnTo, data: null } : null;
+                game.notify();
+              }}
+            >
+              取消
+            </button>
+            <button
+              className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold active:scale-95"
+              onClick={() => {
+                game.clearProgress();
+                game.resetGame();
+              }}
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     function ShopContent({ game }) {
       const { state } = game;
-      const plantIds = Object.keys(PlantDB);
+      const plantIds = Object.keys(window.GameStore.PlantDB);
       
       const items = [
         { kind: 'seedPack' },
@@ -1209,7 +1557,7 @@
             let disabled = false;
 
             if (item.kind === 'seed') {
-              const p = PlantDB[item.plantId];
+              const p = window.GameStore.PlantDB[item.plantId];
               name = p.name;
               price = p.cost;
               const sellNow = game.getSellPriceNow(p.id);
@@ -1240,7 +1588,7 @@
               disabled = lockedCount === 0;
               actionText = '解锁';
             } else if (item.kind === 'unlockPlant') {
-              const p = PlantDB[item.plantId];
+              const p = window.GameStore.PlantDB[item.plantId];
               name = `${p.name}（${p.category === 'veg' ? '蔬菜' : '花卉'}）`;
               price = p.unlockPrice;
               sub = '解锁后可在商店购买该种子';
@@ -1251,13 +1599,13 @@
               const cost = game.getNextTileUnlockCost();
               price = cost ?? 0;
               const unlocked = game.getUnlockedTileCount();
-              sub = `土地 ${GRID_SIZE}×${GRID_SIZE}（已解锁 ${unlocked}/${GRID_SIZE * GRID_SIZE * PAGES}）`;
+              sub = `土地 ${window.GameStore.GRID_SIZE}×${window.GameStore.GRID_SIZE}（已解锁 ${unlocked}/${window.GameStore.GRID_SIZE * window.GameStore.GRID_SIZE * window.GameStore.PAGES}）`;
               disabled = cost == null;
             }
 
             const getIcon = () => {
               if (item.kind === 'seed' || item.kind === 'unlockPlant') {
-                return <CropIcon plant={PlantDB[item.plantId]} stage="mature" />;
+                return <CropIcon plant={window.GameStore.PlantDB[item.plantId]} stage="seed" />;
               }
               if (item.kind === 'fertilizer') return <span className="text-2xl">💩</span>;
               if (item.kind === 'pesticide') return <span className="text-2xl">🛡️</span>;
@@ -1301,7 +1649,7 @@
     function MarketWarehouseContent({ game }) {
       const { state, UI } = game;
       const tab = UI.modal.data?.tab ?? 'market';
-      const plantIds = Object.keys(PlantDB);
+      const plantIds = Object.keys(window.GameStore.PlantDB);
 
       return (
         <div className="flex flex-col h-full">
@@ -1325,7 +1673,7 @@
               <div className="text-xs text-slate-500 mb-3">当天收购价（80%~120%波动）</div>
               <div className="flex flex-col gap-2">
                 {plantIds.map(id => {
-                  const p = PlantDB[id];
+                  const p = window.GameStore.PlantDB[id];
                   const price = game.getSellPriceNow(id);
                   return (
                     <div key={id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center">
@@ -1370,7 +1718,7 @@
 
                   return plantRows.map(id => {
                     const c = counts[id];
-                    const p = PlantDB[id];
+                    const p = window.GameStore.PlantDB[id];
                     const healthAvg = Math.round(avgHealth[id] / Math.max(1, c));
                     const price = game.getSellPriceNow(id);
                     const est = Math.floor(price * (healthAvg / 100));
@@ -1438,7 +1786,7 @@
       if (!tile) return null;
 
       const stage = game.getPlantStage(tile);
-      const plant = tile.plantId ? PlantDB[tile.plantId] : null;
+      const plant = tile.plantId ? window.GameStore.PlantDB[tile.plantId] : null;
       const growthDays = plant?.growthDays ?? 0;
       const maturity = plant ? Math.max(0, Math.min(1, tile.daysGrown / Math.max(1, growthDays))) : 0;
       const maturityPct = Math.floor(maturity * 100);
@@ -1490,8 +1838,8 @@
       if (!UI.picker) return [];
       if (UI.picker.type === 'tool') {
         const opts = [
-          { id: 'water', label: '💧 浇水壶', extra: state.goldenCanUnlocked ? '可切换黄金' : null },
-          { id: 'sickle', label: '🧺 镰刀', extra: null },
+          { id: 'water', label: '🧺 浇水壶', extra: state.goldenCanUnlocked ? '可切换黄金' : null },
+          { id: 'sickle', label: '☭ 镰刀', extra: null },
           { id: 'shovel', label: '⛏️ 铲子', extra: null },
         ];
         if (state.goldenCanUnlocked) opts.unshift({ id: 'goldWater', label: '✨ 黄金喷壶', extra: '2×2' });
@@ -1506,9 +1854,9 @@
         ];
       }
       if (UI.picker.type === 'seed') {
-        return Object.keys(PlantDB)
+        return Object.keys(window.GameStore.PlantDB)
           .filter((id) => state.unlockedPlants[id])
-          .map((id) => ({ id, label: PlantDB[id].name, extra: `x${game.getInventoryCount(id)}`, plantId: id }));
+          .map((id) => ({ id, label: window.GameStore.PlantDB[id].name, extra: `x${game.getInventoryCount(id)}`, plantId: id }));
       }
       return [];
     }
@@ -1533,7 +1881,7 @@
 
     function getSeedName(selected) {
       if (selected.kind !== 'seed') return '种子';
-      return PlantDB[selected.id]?.name ?? '种子';
+      return window.GameStore.PlantDB[selected.id]?.name ?? '种子';
     }
 
     // ==================== Main App ====================
@@ -1544,24 +1892,17 @@
 
       const [now, setNow] = useState(Date.now());
       const [page, setPage] = useState(0);
+      const [bootLoaded, setBootLoaded] = useState(false);
+      const [bootFading, setBootFading] = useState(false);
+      const [bootDismissed, setBootDismissed] = useState(false);
 
       useEffect(() => {
-        const handleFirstInteraction = () => {
-          audioManager.init();
-          audioManager.updateWeather(state.currentWeather);
-          window.removeEventListener('click', handleFirstInteraction, true);
-          window.removeEventListener('touchstart', handleFirstInteraction, true);
-        };
-        window.addEventListener('click', handleFirstInteraction, true);
-        window.addEventListener('touchstart', handleFirstInteraction, true);
-        return () => {
-          window.removeEventListener('click', handleFirstInteraction, true);
-          window.removeEventListener('touchstart', handleFirstInteraction, true);
-        };
+        const t = window.setTimeout(() => setBootLoaded(true), 600);
+        return () => window.clearTimeout(t);
       }, []);
 
       useEffect(() => {
-        audioManager.updateWeather(state.currentWeather);
+        window.GameStore.audioManager.updateWeather(state.currentWeather);
       }, [state.currentWeather]);
 
       useEffect(() => {
@@ -1580,13 +1921,21 @@
       }, [state, UI, game]);
 
       const remainingMs = Math.max(0, state.nextDayAt - now);
-      const progress = 1 - Math.max(0, Math.min(1, remainingMs / DAY_DURATION_MS));
+      const progress = 1 - Math.max(0, Math.min(1, remainingMs / window.GameStore.DAY_DURATION_MS));
       const sec = Math.ceil(remainingMs / 1000);
       const mm = String(Math.floor(sec / 60)).padStart(2, '0');
       const ss = String(sec % 60).padStart(2, '0');
 
-      const weather = WeatherDB[state.currentWeather];
-      const forecastWeather = state.forecastWeatherId ? WeatherDB[state.forecastWeatherId] : null;
+      const weather = window.GameStore.WeatherDB[state.currentWeather];
+      const forecastWeather = state.forecastWeatherId ? window.GameStore.WeatherDB[state.forecastWeatherId] : null;
+
+      const handleStart = () => {
+        if (bootDismissed || bootFading || !bootLoaded) return;
+        window.GameStore.audioManager.init();
+        window.GameStore.audioManager.updateWeather(state.currentWeather);
+        setBootFading(true);
+        window.setTimeout(() => setBootDismissed(true), 200);
+      };
 
       const handleTileClick = (idx) => {
         game.actOnTile(idx);
@@ -1600,11 +1949,11 @@
       const getTileBgColor = (tile) => {
         if (!tile.isUnlocked) return 'bg-yellow-900/50';
         const health = game.getSoilHealth(tile);
-        if (health >= 0.999) return 'bg-green-700';
-        if (health >= 0.8) return 'bg-green-600';
-        if (health >= 0.6) return 'bg-green-500';
-        if (health >= 0.4) return 'bg-green-400';
-        if (health >= 0.2) return 'bg-lime-500';
+        if (health >= 0.999) return 'bg-yellow-950';
+        if (health >= 0.8) return 'bg-yellow-900';
+        if (health >= 0.6) return 'bg-yellow-800';
+        if (health >= 0.4) return 'bg-yellow-700';
+        if (health >= 0.2) return 'bg-amber-600';
         return 'bg-lime-400';
       };
 
@@ -1615,7 +1964,7 @@
         if (!tile.plantId) {
           return <div className="text-xs text-slate-800/50">空地</div>;
         }
-        const plant = PlantDB[tile.plantId];
+        const plant = window.GameStore.PlantDB[tile.plantId];
         const stage = game.getPlantStage(tile);
         
         return (
@@ -1636,6 +1985,28 @@
 
       return (
         <div className="min-h-screen bg-pastoral text-slate-100 font-sans select-none flex flex-col max-w-md mx-auto relative overflow-hidden">
+          {!bootDismissed && (
+            <div
+              className={`fixed inset-0 z-[999] flex items-center justify-center pf-load-screen transition-opacity duration-200 ${bootFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            >
+              <div className="absolute inset-0 bg-slate-950/40" />
+              <div className="relative w-full flex flex-col items-center justify-center px-6 pb-safe pt-safe">
+                <div className="text-[clamp(40px,10vw,64px)] font-black tracking-widest text-amber-200 drop-shadow-[0_4px_0_rgba(0,0,0,0.35)] mb-10 text-center">
+                  农场经营
+                </div>
+                <div className="pf-load-track">
+                  <div className="pf-load-bar" />
+                </div>
+                <div className="h-10 mt-8 flex items-center justify-center">
+                  {bootLoaded && (
+                    <button className="pf-wood-btn" onClick={handleStart}>
+                      下地干活
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           <div className="bg-slate-800 p-4 shadow-md z-10">
             <div className="flex justify-between items-start mb-2">
               <div>
@@ -1656,12 +2027,12 @@
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      UI.audioMuted = audioManager.toggleMute();
+                      UI.modal = { type: 'settings', data: null };
                       game.notify();
                     }}
                     className="p-1 bg-slate-700 rounded-full hover:bg-slate-600 active:scale-95 transition-transform"
                   >
-                    {UI.audioMuted ? <span className="text-slate-400">🔇</span> : <span className="text-green-400">🔊</span>}
+                    <span className="text-amber-200">⚙️</span>
                   </button>
                   <div className="text-sm text-slate-300">
                     明日: {forecastWeather ? forecastWeather.icon : '？'}
@@ -1692,7 +2063,7 @@
                 </svg>
               </button>
             )}
-            {page < PAGES - 1 && (
+            {page < window.GameStore.PAGES - 1 && (
               <button 
                 className="absolute right-0 top-1/2 -translate-y-1/2 z-30 transition-all active:scale-95"
                 onClick={() => setPage(page + 1)}
@@ -1708,14 +2079,14 @@
               className="flex transition-transform duration-300 ease-in-out w-full h-full absolute inset-0"
               style={{ transform: `translateX(-${page * 100}%)` }}
             >
-              {Array.from({ length: PAGES }).map((_, p) => (
+              {Array.from({ length: window.GameStore.PAGES }).map((_, p) => (
                 <div key={p} className="w-full h-full flex-shrink-0 flex items-center justify-center p-4">
                   <div 
                     className="grid gap-2 w-full aspect-square max-w-[400px] z-10 relative"
-                    style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))` }}
+                    style={{ gridTemplateColumns: `repeat(${window.GameStore.GRID_SIZE}, minmax(0, 1fr))` }}
                   >
-                    {state.farmGrid.slice(p * (GRID_SIZE * GRID_SIZE), (p + 1) * (GRID_SIZE * GRID_SIZE)).map((tile, idxInPage) => {
-                      const idx = p * (GRID_SIZE * GRID_SIZE) + idxInPage;
+                    {state.farmGrid.slice(p * (window.GameStore.GRID_SIZE * window.GameStore.GRID_SIZE), (p + 1) * (window.GameStore.GRID_SIZE * window.GameStore.GRID_SIZE)).map((tile, idxInPage) => {
+                      const idx = p * (window.GameStore.GRID_SIZE * window.GameStore.GRID_SIZE) + idxInPage;
                       return (
                         <Tile 
                           key={tile.id} 
@@ -1729,18 +2100,18 @@
                       );
                     })}
 
-                    {UI.floatingTexts.filter(ft => Math.floor(ft.tileIdx / (GRID_SIZE * GRID_SIZE)) === p).map(ft => {
-                      const idxInPage = ft.tileIdx % (GRID_SIZE * GRID_SIZE);
-                      const row = Math.floor(idxInPage / GRID_SIZE);
-                      const col = idxInPage % GRID_SIZE;
+                    {UI.floatingTexts.filter(ft => Math.floor(ft.tileIdx / (window.GameStore.GRID_SIZE * window.GameStore.GRID_SIZE)) === p).map(ft => {
+                      const idxInPage = ft.tileIdx % (window.GameStore.GRID_SIZE * window.GameStore.GRID_SIZE);
+                      const row = Math.floor(idxInPage / window.GameStore.GRID_SIZE);
+                      const col = idxInPage % window.GameStore.GRID_SIZE;
                       return (
                         <div 
                           key={ft.id}
                           className="absolute pointer-events-none font-bold text-lg animate-float-up z-20"
                           style={{ 
                             color: ft.color,
-                            left: `calc(${col * (100 / GRID_SIZE)}% + ${50 / GRID_SIZE}%)`,
-                            top: `calc(${row * (100 / GRID_SIZE)}% + ${50 / GRID_SIZE}%)`,
+                            left: `calc(${col * (100 / window.GameStore.GRID_SIZE)}% + ${50 / window.GameStore.GRID_SIZE}%)`,
+                            top: `calc(${row * (100 / window.GameStore.GRID_SIZE)}% + ${50 / window.GameStore.GRID_SIZE}%)`,
                             transform: 'translate(-50%, -50%)',
                             textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000'
                           }}
@@ -1786,17 +2157,20 @@
                       >
                         <div className="flex items-center justify-center mb-1">
                           {UI.picker.type === 'seed' ? (
-                            <div className="w-8 h-8 flex items-center justify-center">
-                              <CropIcon plant={PlantDB[opt.plantId]} stage="mature" />
-                            </div>
+        <div className="flex items-center justify-center w-full gap-0 mb-0 mt-0 px-1">
+          <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transform scale-90">
+            <CropIcon plant={window.GameStore.PlantDB[opt.plantId]} stage="seed" />
+          </div>
+          <div className="text-sm font-bold truncate text-left flex-1">{opt.label}</div>
+        </div>
                           ) : (
                             <div className="text-sm font-bold">{opt.label}</div>
                           )}
                         </div>
                         {UI.picker.type === 'seed' ? (
-                          <div className="text-[10px] font-bold truncate w-full">{opt.label}</div>
+                          <div className="text-[20px] font-bold truncate w-full">{opt.label}</div>
                         ) : null}
-                        {opt.extra && <div className={`text-[10px] mt-0.5 font-medium ${isActive ? 'text-amber-200' : 'text-[#8b5a2b]'}`}>{opt.extra}</div>}
+                        {opt.extra && <div className={`text-xs font-medium ${UI.picker.type === 'seed' ? '-mt-2' : 'mt-1.5'}  ${isActive ? 'text-amber-200' : 'text-[#8b5a2b]'}`}>{opt.extra}</div>}
                       </button>
                     );
                   })}
